@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes" ?>
+<CodeBlocks_project_file>
+	<FileVersion major="1" minor="6" />
+	<Project>
+		<Option title="ruuvimqtt2influx" />
+		<Option makefile_is_custom="1" />
+		<Option pch_mode="2" />
+		<Option compiler="gcc" />
+		<Option show_notes="0">
+			<notes>
+				<![CDATA[todo:
+
+]]>
+			</notes>
+		</Option>
+		<Build>
+			<Target title="Debug">
+				<Option output="ruuvimqtt2influx" prefix_auto="1" extension_auto="1" />
+				<Option object_output="obj/Debug/" />
+				<Option type="1" />
+				<Option compiler="gcc" />
+				<Compiler>
+					<Add option="-g" />
+				</Compiler>
+			</Target>
+		</Build>
+		<Compiler>
+			<Add option="-Wall" />
+		</Compiler>
+		<Unit filename="argparse.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="argparse.h" />
+		<Unit filename="ftest.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="global.h" />
+		<Unit filename="influxdb-post/influxdb-post.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="influxdb-post/influxdb-post.h" />
+		<Unit filename="log.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="log.h" />
+		<Unit filename="m-data.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="m-data.h" />
+		<Unit filename="mqtt/include/MQTTClient.h" />
+		<Unit filename="mqtt/include/MQTTClientPersistence.h" />
+		<Unit filename="mqtt/include/MQTTExportDeclarations.h" />
+		<Unit filename="mqtt/include/MQTTProperties.h" />
+		<Unit filename="mqtt/include/MQTTReasonCodes.h" />
+		<Unit filename="mqtt/include/MQTTSubscribeOpts.h" />
+		<Unit filename="mqtt_publish.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="mqtt_publish.h" />
+		<Unit filename="ruuvimqtt.cpp">
+			<Option target="&lt;{~None~}&gt;" />
+		</Unit>
+		<Unit filename="ruuvimqtt.h">
+			<Option target="&lt;{~None~}&gt;" />
+		</Unit>
+		<Unit filename="ruuvimqtt2influx.cpp" />
+		<Unit filename="ruuvimqtt2influx.service" />
+		<Extensions />
+	</Project>
+</CodeBlocks_project_file>
