@@ -112,7 +112,10 @@ int mqtt_pub (mqtt_pubT *m, char *topicIn, char *str, int timeoutMs, int qos, in
 		if (rc == MQTTCLIENT_SUCCESS) reconnected++;
 	}
 	free(topic);
-	if (rc != MQTTCLIENT_SUCCESS && rc != MQTT_RECONNECTED) return rc;
+	if (rc != MQTTCLIENT_SUCCESS && rc != MQTT_RECONNECTED) {
+		EPRINTFN("mqtt_pub: rc: %d",rc);
+		return rc;
+	}
 	if (timeoutMs) rc = MQTTClient_waitForCompletion(m->client, m->last_token, timeoutMs);
 	if (reconnected && rc == MQTTCLIENT_SUCCESS) rc = MQTT_RECONNECTED;
 	return rc;

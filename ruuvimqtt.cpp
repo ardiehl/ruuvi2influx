@@ -315,8 +315,11 @@ int msgarrvd(void *context, char *topicName, int topicLen, MQTTClient_message *m
     return 1;
 }
 
+int mqttSenderConnectionLost;
+
 void connlost(void *context, char *cause) {
-    EPRINTFN("Connection lost (%s)",cause);
+    EPRINTFN("Connection lost (%s), will try to reconnect",cause);
+    mqttSenderConnectionLost++;
 }
 
 #define QOS         1
@@ -327,24 +330,17 @@ int mqttReceiverInit (const char *hostname, int port, const char *topic, const c
     int rc;
     char *address;
 
-#if 0
-    processRuuviData("0201061BFF9904050F0853DAC3C80010FFE00418B196940D3EF0661B4D4621");
-    processRuuviData("0201061BFF99040512FC5394C37C0004FFFC040CAC364200CDCBB8334C884F");
-    processRuuviData("0201061BFF9904057FFFFFFEFFFE7FFF7FFF7FFFFFDEFEFFFECBB8334C884F");
-    processRuuviData("0201061BFF9904058001000000008001800180010000000000CBB8334C884F");
-    exit(1);
-#endif
-
-
     address = (char *)calloc(1,strlen(hostname+20));
     sprintf(address,"%s:%d",hostname,port);
     if ((rc = MQTTClient_create(&client, address, clientID, MQTTCLIENT_PERSISTENCE_NONE, NULL)) != MQTTCLIENT_SUCCESS) {
         EPRINTFN("Failed to create client for address %s, return code %d", address, rc);
+        free(address);
         return 0;
     }
 
     if ((rc = MQTTClient_setCallbacks(client, NULL, connlost, msgarrvd, NULL)) != MQTTCLIENT_SUCCESS) {
         EPRINTFN("Failed to set callbacks, return code %d", rc);
+        free(address);
         return 0;
     }
 
@@ -352,10 +348,11 @@ int mqttReceiverInit (const char *hostname, int port, const char *topic, const c
     opts.cleansession = 1;
     if ((rc = MQTTClient_connect(client, &opts)) != MQTTCLIENT_SUCCESS)  {
         EPRINTFN("Failed to connect to %s, return code %d", address, rc);
+        free(address);
         return 0;
     }
     LOGN(0,"connected to source MQTT server %s",address);
-
+	free(address);
     if ((rc = MQTTClient_subscribe(client, topic, QOS)) != MQTTCLIENT_SUCCESS) {
         EPRINTFN("Failed to subscribe to topic \"%s\", return code %d\n", topic, rc);
         return 0;

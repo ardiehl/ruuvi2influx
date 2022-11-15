@@ -34,7 +34,7 @@ and send the data to influxdb (1.x or 2.x API) and/or via mqtt
 #include "ruuvimqtt.h"
 #include "MQTTClient.h"
 
-#define VER "0.01 Armin Diehl <ad@ardiehl.de> Oct 28,2022, compiled " __DATE__ " " __TIME__
+#define VER "0.02 Armin Diehl <ad@ardiehl.de> Oct 28,2022, compiled " __DATE__ " " __TIME__
 #define ME "ruuvimqtt2influx"
 #define CONFFILE "ruuvimqtt2influx.conf"
 
@@ -49,6 +49,7 @@ char *formulaValMeterName;
 influx_client_t *iClient;
 
 mqtt_pubT *mClient;
+extern int mqttSenderConnectionLost;
 
 #define MQTT_PREFIX_DEF "ad/house/temp/"
 
@@ -533,6 +534,20 @@ int main(int argc, char *argv[]) {
 
 
 		if (isFirstQuery) isFirstQuery--;
+
+		if (mqttSenderConnectionLost) {
+			rc = mqttReceiverInit (mClient->hostname, mClient->port, mqttTopic, ME "-SUB");
+			if (rc) {
+				mqttSenderConnectionLost = 0;
+				LOGN(0,"mqtt receiver reconnected");
+			} else {
+				rc = 150;		// wait 15 seconds before the next connect attempt
+				while (rc && !terminated) {
+					rc--;
+					msleep(100);
+				}
+			}
+		}
 
 
 	}
