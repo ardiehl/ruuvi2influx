@@ -34,7 +34,7 @@ and send the data to influxdb (1.x or 2.x API) and/or via mqtt
 #include "ruuvimqtt.h"
 #include "MQTTClient.h"
 
-#define VER "0.02 Armin Diehl <ad@ardiehl.de> Oct 28,2022, compiled " __DATE__ " " __TIME__
+#define VER "0.03 Armin Diehl <ad@ardiehl.de> Mar 19,2023, compiled " __DATE__ " " __TIME__
 #define ME "ruuvimqtt2influx"
 #define CONFFILE "ruuvimqtt2influx.conf"
 
@@ -359,7 +359,13 @@ int mqttSendData (dataRead_t * dr,int dryrun) {
 	if (buf == NULL) return -1;
 	*buf=0;
 
-	APPEND("{");
+
+	APPEND("{\"name\":\"");
+	if (influxMeasurement) {
+			APPEND(influxMeasurement); APPEND(".");
+	}
+	APPEND(dr->name);
+	APPEND("\", ");
 	APPENDFLOAT(Temp,dr->dataCurr.temperature,2); first--;
     APPENDFLOAT(Humidity,dr->dataCurr.humidity,1);
     APPENDFLOAT(BattVoltage,(double)dr->dataCurr.batteryVoltage/1000,2);
@@ -406,6 +412,11 @@ int mqttSendData (dataRead_t * dr,int dryrun) {
 
 int influxAppendData (dataRead_t * data, uint64_t timestamp) {
 
+	if (data->dataInflux.temperature < -900) {
+		//EPRINTFN("influxAppendData: internal program error, would write -999 as temp");
+		// can happen if the mqqt sender was disconnected, will be ok again after a reconnect
+		return 0;
+	}
 	influxBufUsed = influxdb_format_line(&influxBuf, &influxBufLen, influxBufUsed,
                 INFLUX_MEAS(influxMeasurement),
                 INFLUX_TAG(influxTagName, data->name),

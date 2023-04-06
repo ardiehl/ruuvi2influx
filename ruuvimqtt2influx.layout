@@ -2,19 +2,9 @@
 <CodeBlocks_layout_file>
 	<FileVersion major="1" minor="0" />
 	<ActiveTarget name="Debug" />
-	<File name="mqtt_publish.h" open="1" top="0" tabpos="5" split="0" active="1" splitpos="0" zoom_1="0" zoom_2="0">
+	<File name="mqtt_publish.c" open="1" top="1" tabpos="6" split="0" active="1" splitpos="0" zoom_1="0" zoom_2="0">
 		<Cursor>
-			<Cursor1 position="199" topLine="9" />
-		</Cursor>
-	</File>
-	<File name="ruuvimqtt2influx.cpp" open="1" top="0" tabpos="4" split="0" active="1" splitpos="0" zoom_1="0" zoom_2="0">
-		<Cursor>
-			<Cursor1 position="10714" topLine="338" />
-		</Cursor>
-	</File>
-	<File name="ruuvimqtt.cpp" open="1" top="0" tabpos="1" split="0" active="1" splitpos="0" zoom_1="0" zoom_2="0">
-		<Cursor>
-			<Cursor1 position="223" topLine="0" />
+			<Cursor1 position="3208" topLine="97" />
 		</Cursor>
 	</File>
 	<File name="ruuvimqtt.h" open="1" top="0" tabpos="2" split="0" active="1" splitpos="0" zoom_1="0" zoom_2="0">
@@ -22,14 +12,25 @@
 			<Cursor1 position="426" topLine="0" />
 		</Cursor>
 	</File>
+	<File name="ruuvimqtt2influx.cpp" open="1" top="0" tabpos="4" split="0" active="1" splitpos="0" zoom_1="0" zoom_2="0">
+		<Cursor>
+			<Cursor1 position="12017" topLine="392" />
+		</Cursor>
+	</File>
 	<File name="log.h" open="1" top="0" tabpos="3" split="0" active="1" splitpos="0" zoom_1="0" zoom_2="0">
 		<Cursor>
-			<Cursor1 position="936" topLine="9" />
+			<Cursor1 position="936" topLine="6" />
 		</Cursor>
 	</File>
-	<File name="mqtt_publish.c" open="1" top="0" tabpos="6" split="0" active="1" splitpos="0" zoom_1="0" zoom_2="0">
+	<File name="mqtt_publish.h" open="1" top="0" tabpos="5" split="0" active="1" splitpos="0" zoom_1="0" zoom_2="0">
 		<Cursor>
-			<Cursor1 position="3295" topLine="86" />
+			<Cursor1 position="199" topLine="9" />
 		</Cursor>
 	</File>
+	<File name="ruuvimqtt.cpp" open="1" top="0" tabpos="1" split="0" active="1" splitpos="0" zoom_1="0" zoom_2="0">
+		<Cursor>
+			<Cursor1 position="11407" topLine="331" />
+		</Cursor>
+	</File>
+	<EditorTabsLayout layout="086930006389cb9d0012740f00000002=0;ruuvimqtt2influx:ruuvimqtt.cpp,1;ruuvimqtt2influx:ruuvimqtt.h,2;ruuvimqtt2influx:log.h,3;ruuvimqtt2influx:ruuvimqtt2influx.cpp,4;ruuvimqtt2influx:mqtt_publish.h,*5;ruuvimqtt2influx:mqtt_publish.c@layout2|name=dummy;caption=;state=2098174;dir=3;layer=0;row=0;pos=0;prop=100000;bestw=1104;besth=379;minw=1104;minh=379;maxw=-1;maxh=-1;floatx=-1;floaty=-1;floatw=-1;floath=-1|name=086930006389cb9d0012740f00000002;caption=;state=2098172;dir=5;layer=0;row=0;pos=0;prop=100000;bestw=200;besth=200;minw=-1;minh=-1;maxw=-1;maxh=-1;floatx=-1;floaty=-1;floatw=-1;floath=-1|dock_size(5,0,0)=202|" />
 </CodeBlocks_layout_file>
