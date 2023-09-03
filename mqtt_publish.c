@@ -26,7 +26,7 @@ mqtt_pubT * mqtt_pub_init (char * hostname, int port, char *  clientId, char *to
 	m->conn_opts = conn_optsDefault;
 	m->conn_opts.keepAliveInterval = 30;
     m->conn_opts.cleansession = 1;
-	m->clientId = strdup(clientId);
+	if (clientId) m->clientId = strdup(clientId);
 
 	return m;
 }

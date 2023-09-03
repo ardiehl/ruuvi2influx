@@ -27,6 +27,7 @@
 		<Compiler>
 			<Add option="-Wall" />
 		</Compiler>
+		<Unit filename="Makefile" />
 		<Unit filename="argparse.c">
 			<Option compilerVar="CC" />
 		</Unit>

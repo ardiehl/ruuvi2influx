@@ -3,8 +3,12 @@
 # paho (mqtt) static or dynamic
 PAHOSTATIC     = 0
 
+# libcurl static or dynamic, currently (08/2023) raspberry as well as Fedora 38
+# have versions installed that does not support websockets
+CURLSTATIC = 1
 
-TARGETS = ruuvimqtt2influx 
+
+TARGETS = ruuvimqtt2influx
 
 # OS dependend executables
 WGET           = wget -q --show-progress
@@ -20,6 +24,7 @@ INSTALLDIR_BIN = $(INSTALLDIR)/bin
 INSTALLDIR_CFG = $(INSTALLDIR)/etc
 INSTALLDIR_SYS = $(INSTALLDIR)/lib/systemd/system
 SYSTEMD_RELOAD = systemctl daemon-reload
+XZUNPACK       = xz -d -c
 
 ALLTARGETS = $(TARGETS:=$(TGT))
 
@@ -59,9 +64,52 @@ LIBS         += -lpaho-mqtt3c
 endif
 
 
+ifeq ($(CURLSTATIC),1)
+CURLVERSION  = 8.2.1
+CURLSRCFILE  = curl-$(CURLVERSION).tar.xz
+CURLSRC      = https://github.com/curl/curl/releases/download/curl-8_2_1/$(CURLSRCFILE)
+CURLDIR      = curl$(ARCH)$(TGT)
+CURLTAR      = $(CURLDIR)/$(CURLSRCFILE)
+CURLMAKEDIR  = $(CURLDIR)/curl-$(CURLVERSION)
+CURLMAKE     = $(CURLMAKEDIR)/Makefile
+CURLLIB      = $(CURLMAKEDIR)/lib/.libs/libcurl.a
+LIBS         += $(CURLLIB) -lz -lssl -lcrypto -lzstd
+CPPFLAGS     += -I$(CURLMAKEDIR)/include -DCURL_STATIC
+else
+LIBS          += -lcurl
+endif
+
+
 
 # include dependencies if they exist
 -include $(DEPS)
+
+
+# ------------------------ libmodbus static ----------------------------------
+
+ifeq ($(MODBUSSTATIC),1)
+
+$(MODBUSTAR):
+	@$(MAKEDIR) $(MODBUSDIR)
+	@echo "Downloading $(MODBUSSRC)"
+	@cd $(MODBUSDIR); $(WGET) $(MODBUSSRC)
+
+
+$(MODBUSMAKE):        $(MODBUSTAR)
+	@echo "unpacking $(MODBUSSRCFILE)"
+	@cd $(MODBUSDIR); $(TAR) x --gunzip < $(MODBUSSRCFILE);
+	@echo "Generating Makefile"
+	@cd $(MODBUSMAKEDIR); ./configure -q
+	@echo
+
+$(MODBUSLIB): $(MODBUSMAKE)
+	@echo "Compiling modbus"
+	@$(MAKE) -s -C $(MODBUSMAKEDIR)
+	@echo "Generating $(MODBUSLIB)"
+	@$(AR) r $(MODBUSLIB) $(MODBUSMAKEDIR)/src/.libs/*.o
+	@$(MAKE) -s -C $(MODBUSMAKEDIR) clean
+
+endif
 
 
 ifeq ($(PAHOSTATIC),1)
@@ -69,14 +117,36 @@ $(MQTTLIBP):
 	@cd paho; ./buildmqtt || exit 1; cd ..
 endif
 
+# ------------------------ libmcurl static -----------------------------------
+ifeq ($(CURLSTATIC),1)
 
-$(OBJDIR)/%.o: %.c  $(MQTTLIBP) $(MUPARSERLIB)
+$(CURLTAR):
+	@$(MAKEDIR) $(CURLDIR)
+	@echo "Downloading $(CURLSRC)"
+	@cd $(CURLDIR); $(WGET) $(CURLSRC)
+
+$(CURLMAKE):        $(CURLTAR)
+	@echo "unpacking $(CURLSRCFILE)"
+	@cd $(CURLDIR); $(XZUNPACK) $(CURLSRCFILE) | $(TAR) xv
+	@echo "Generating Makefile"
+	@cd $(CURLMAKEDIR); ./configure --without-psl --disable-file --disable-ldap --disable-ldaps --disable-tftp --disable-dict --without-libidn2 --with-openssl --enable-websockets  --disable-ftp --disable-rtsp --disable-telnet --disable-pop3 --disable-imap --disable-smb --disable-smtp --disable-gopher --disable-mqtt --disable-manual --disable-ntlm --disable-unix-sockets --disable-cookies --without-brotli
+	@echo
+
+$(CURLLIB): $(CURLMAKE)
+	@echo "Compiling modbus"
+	@$(MAKE) -s -C $(CURLMAKEDIR)
+
+endif
+
+
+
+$(OBJDIR)/%.o: %.c  $(MQTTLIBP) $(MUPARSERLIB) $(CURLLIB)
 	@echo -n "compiling $< to $@ "
 	$(CC) $(CFLAGS) $(CPPFLAGS) -c $< -o $@
 	@echo ""
 
 
-$(OBJDIR)/%.o: %.cpp $(MQTTLIBP) $(MUPARSERLIB)
+$(OBJDIR)/%.o: %.cpp $(MQTTLIBP) $(MUPARSERLIB) $(CURLLIB)
 	@echo -n "compiling $< to $@ "
 	@$(CXX) $(CXXFLAGS) $(CPPFLAGS) -c $< -o $@
 	@echo ""
@@ -84,7 +154,7 @@ $(OBJDIR)/%.o: %.cpp $(MQTTLIBP) $(MUPARSERLIB)
 
 .PRECIOUS: $(TARGETS) $(ALLOBJECTS)
 
-$(ALLTARGETS): $(OBJECTS) $(SMLLIBP) $(MQTTLIBP)
+$(ALLTARGETS): $(OBJECTS) $(SMLLIBP) $(MQTTLIBP) $(MUPARSERLIB) $(CURLLIB)
 	@echo -n "linking $@ "
 	$(CXX) $(OBJDIR)/$(patsubst %$(TGT),%,$@).o $(LINKOBJECTS) -Wall $(LIBS) -o $@
 	@echo ""
@@ -109,6 +179,9 @@ distclean:	clean
 ifeq ($(MUPARSERSTATIC),1)
 	@$(RMRF) $(MUPARSERDIR)
 endif
+ifeq ($(CURLSTATIC),1)
+	@$(RMRF) $(CURLDIR)
+endif
 	rm -rf $(OBJDIR)
 	@echo "cleaned static build dirs"
 
@@ -127,5 +200,9 @@ info:
 	@echo "          LIBS: $(LIBS)"
 	@echo "    MQTTLIBDIR: $(MQTTLIBDIR)"
 	@echo "       MQTTLIB: $(MQTTLIB)"
+	@echo "    CURLSTATIC: $(CURLSTATIC)"
+	@echo "       CURLLIB: $(CURLLIB)"
+	@echo "       CURLDIR: $(CURLDIR)"
+	@echo "       CURLTAR: $(CURLTAR)"
 	@echo "   INSTALLDIRS: $(INSTALLDIR_BIN) $(INSTALLDIR_CFG) $(INSTALLDIR_SYS)"
 	@echo "$(notdir $(MUPARSERSRC))"

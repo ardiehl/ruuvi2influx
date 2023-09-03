@@ -34,7 +34,7 @@ and send the data to influxdb (1.x or 2.x API) and/or via mqtt
 #include "ruuvimqtt.h"
 #include "MQTTClient.h"
 
-#define VER "0.03 Armin Diehl <ad@ardiehl.de> Mar 19,2023, compiled " __DATE__ " " __TIME__
+#define VER "0.04 Armin Diehl <ad@ardiehl.de> Sep 3,2023, compiled " __DATE__ " " __TIME__
 #define ME "ruuvimqtt2influx"
 #define CONFFILE "ruuvimqtt2influx.conf"
 
@@ -51,15 +51,7 @@ influx_client_t *iClient;
 mqtt_pubT *mClient;
 extern int mqttSenderConnectionLost;
 
-#define MQTT_PREFIX_DEF "ad/house/temp/"
 
-
-// maximal length of a http line send
-#define INFLUX_BUFLEN 2048
-
-char * influxBuf;
-size_t influxBufUsed;
-int influxBufLen;
 
 #define INFLUX_DEFAULT_MEASUREMENT "Temp"
 #define INFLUX_DEFAULT_TAGNAME "Device"
@@ -71,6 +63,15 @@ int mqttRetain;
 char * mqttprefix;
 char * mqttTopic;
 #define MQTT_DEF_TOPIC "ruuvi"
+char * mqttReceiverClientID;
+
+// Grafana Live
+char *ghost;
+int gport = 3000;
+char *gtoken;
+char *gpushid;
+influx_client_t *gClient;
+
 
 /* msleep(): Sleep for the requested number of milliseconds. */
 int msleep(long msec)
@@ -191,13 +192,21 @@ int parseArgs (int argc, char **argv) {
 		AP_OPT_INTVAL       (1,'Q',"mqttqos"        ,&mqttQOS              ,"default mqtt QOS, can be changed for meter")
 		AP_OPT_INTVAL       (1,'r',"mqttretain"     ,&mqttRetain           ,"default mqtt retain, can be changed for meter")
 		AP_OPT_STRVAL       (1,'t',"mqtttopic"      ,&mqttTopic            ,"topic for mqtt subscribe")
+
+		AP_OPT_STRVAL       (1,'i',"mqttclientid"   ,&mClient->clientId    ,"mqtt client id")
+
+		AP_OPT_STRVAL       (1,0  ,"ghost"          ,&ghost                ,"grafana server url w/o port, e.g. ws://localost or https://localhost")
+		AP_OPT_INTVAL       (1,0  ,"gport"          ,&gport                ,"grafana port")
+		AP_OPT_STRVAL       (1,0  ,"gtoken"         ,&gtoken               ,"authorisation api token for Grafana")
+		AP_OPT_STRVAL       (1,0  ,"gpushid"        ,&gpushid              ,"push id for Grafana")
+
 		AP_OPT_STRVAL_CB    (0,'a',"map"            ,NULL                  ,"id,name - map id to name, can be specified multiple times",&mapCallback)
 		AP_OPT_INTVALFO     (0,'v',"verbose"        ,&log_verbosity        ,"increase or set verbose level")
 		AP_OPT_INTVAL       (0,'P',"poll"           ,&queryIntervalSecs    ,"poll intervall in seconds")
 		AP_OPT_INTVALF      (0,'y',"syslog"         ,&syslog               ,"log to syslog insead of stderr")
 		AP_OPT_INTVALF_CB   (0,'Y',"syslogtest"     ,NULL                  ,"send a testtext to syslog and exit",&syslogTestCallback)
 		AP_OPT_INTVALF_CB   (0,'e',"version"        ,NULL                  ,"show version and exit",&showVersionCallback)
-		AP_OPT_INTVALFO     (0,'U',"dryrun"         ,&dryrun               ,"Show what would be written to MQQT/Influx for one query and exit")
+		AP_OPT_INTVALFO     (0,'U',"dryrun"         ,&dryrun               ,"Show what would be written to MQTT/Influx/Grafana")
 	AP_END;
 
 	// check if we have a configfile argument
@@ -226,13 +235,6 @@ int parseArgs (int argc, char **argv) {
 	if (res != 0) {
 		argParse_free (a);
 		return res;
-	}
-
-
-	if (mClient->hostname) {
-		if (!mqttprefix) {
-			EPRINTF("mqttprefix required\n"); exit(1);
-		}
 	}
 
 
@@ -296,40 +298,6 @@ void appendToStr (const char *src, char **dest, int *len, int *bufsize) {
 	*len += srclen;
 }
 
-#if 0
-#define VALBUFLEN 64
-void appendValue (int includeName, meterRegisterRead_t *rr, char **dest, int *len, int *bufsize) {
-	char valbuf[VALBUFLEN];
-	char format[30];
-	char *nameBuf;
-	int nameBufSize;
-	char *p = &valbuf[0];
-
-	if (rr->isInt) {
-#ifdef BUILD_64
-		snprintf(valbuf,VALBUFLEN,"%d",(int) rr->fvalue);
-#else
-		snprintf(valbuf,VALBUFLEN,"%ld",(int) rr->fvalue);
-#endif
-	} else {
-		snprintf(format,sizeof(format),"%%%d.%df",10+rr->registerDef->decimals,rr->registerDef->decimals);
-		snprintf(valbuf,VALBUFLEN,format,rr->fvalue);
-		while (*p && *p<=32) p++;
-	}
-	if (includeName) {
-		nameBufSize = strlen(rr->registerDef->name)+10;
-		nameBuf = (char *)malloc(nameBufSize);
-		snprintf(nameBuf,nameBufSize,"\"%s\":",rr->registerDef->name);
-		appendToStr(nameBuf,dest,len,bufsize);
-		free(nameBuf);
-	}
-
-	appendToStr(p,dest,len,bufsize);
-}
-#endif
-
-
-
 
 #define APPEND(SRC) appendToStr(SRC,&buf,&buflen,&bufsize)
 #define APPENDFLOAT(name,value,dec) sprintf(tempStr,"%s\"" #name "\"" ":%1." #dec "f",first?"":", ",value); APPEND(tempStr)
@@ -387,7 +355,7 @@ int mqttSendData (dataRead_t * dr,int dryrun) {
     }
 
 	if (dryrun) {
-		printf("%s = %s\n",name,buf);
+		printf("Dryrun MQTT - %s = %s\n",name,buf);
 	} else {
 		mClient->topicPrefix = mqttprefix;
 		rc = mqtt_pub_strF (mClient,name, 250, mqttQOS,mqttRetain, buf);
@@ -410,14 +378,14 @@ int mqttSendData (dataRead_t * dr,int dryrun) {
 
 
 
-int influxAppendData (dataRead_t * data, uint64_t timestamp) {
+int influxAppendData (influx_client_t* c, dataRead_t * data, uint64_t timestamp) {
 
 	if (data->dataInflux.temperature < -900) {
 		//EPRINTFN("influxAppendData: internal program error, would write -999 as temp");
 		// can happen if the mqqt sender was disconnected, will be ok again after a reconnect
 		return 0;
 	}
-	influxBufUsed = influxdb_format_line(&influxBuf, &influxBufLen, influxBufUsed,
+	influxdb_format_line(c,
                 INFLUX_MEAS(influxMeasurement),
                 INFLUX_TAG(influxTagName, data->name),
 				INFLUX_F_FLT("Temp",data->dataInflux.temperature,1),
@@ -431,6 +399,52 @@ int influxAppendData (dataRead_t * data, uint64_t timestamp) {
 }
 
 
+void GrafanaWriteData (influx_client_t *c) {
+	if (!c) return;
+
+	influxdb_post_freeBuffer(c);
+	dataRead_t *dataRead = mqttDataRead;
+	char fieldName[255];
+	int rc;
+	int numLines = 0;
+
+	influxdb_post_freeBuffer(c);
+	rc = influxdb_format_line(c,INFLUX_MEAS(influxMeasurement),INFLUX_END);
+	if (rc < 0) { EPRINTFN("influxdb_format_line failed, rc:%d, INFLUX_MEAS",rc); exit(1); }
+
+	dataRead = mqttDataRead;
+	while(dataRead) {
+		snprintf(fieldName,sizeof(fieldName),"%s.temp",dataRead->name);	rc = influxdb_format_line(c,INFLUX_F_FLT(fieldName,dataRead->dataInflux.temperature,1),INFLUX_END);
+		if (rc < 0) { EPRINTFN("influxdb_format_line failed, rc:%d, %s",rc,fieldName); exit(1); }
+		snprintf(fieldName,sizeof(fieldName), "%s.U",dataRead->name); rc = influxdb_format_line(c,INFLUX_F_FLT(fieldName,(float)dataRead->dataInflux.batteryVoltage/1000,2),INFLUX_END);
+		if (rc < 0) { EPRINTFN("influxdb_format_line failed, rc:%d, %s",rc,fieldName); exit(1); }
+		snprintf(fieldName,sizeof(fieldName), "%s.Humidity",dataRead->name); rc = influxdb_format_line(c,INFLUX_F_FLT(fieldName,dataRead->dataInflux.humidity,1),INFLUX_END);
+		if (rc < 0) { EPRINTFN("influxdb_format_line failed, rc:%d, %s",rc,fieldName); exit(1); }
+		numLines += 3;
+		dataRead = dataRead->next;
+	}
+	rc = influxdb_format_line(c,INFLUX_TSNOW,INFLUX_END);
+	if (rc < 0) { EPRINTFN("influxdb_format_line failed, rc:%d, TS_NOW",rc); exit(1); }
+
+	if (dryrun) {
+		if (c->influxBufLen) {
+			printf("\nDryrun: would send to grafana:\n%s\n",c->influxBuf);
+			influxdb_post_freeBuffer(c);
+		} else printf("nothing to be posted to Grafana\n");
+	} else {
+		if (c->influxBufLen) {
+			rc = influxdb_post_http_line(c);
+			if (rc != 0) {
+				EPRINTFN("Error: influxdb_post_http_line to grafana failed with rc %d",rc);
+			} else {
+				VPRINTFN(1,"%d lines posted to grafana",numLines);
+			}
+		} else {
+			VPRINTFN(2,"nothing to send to grafana");
+		}
+	}
+}
+
 
 void traceCallback(enum MQTTCLIENT_TRACE_LEVELS level, char *message) {
 	printf(message); printf("\n");
@@ -441,17 +455,21 @@ void traceCallback(enum MQTTCLIENT_TRACE_LEVELS level, char *message) {
 int main(int argc, char *argv[]) {
 	int rc;
 	int64_t influxTimestamp;
-	time_t nextSendTime;
+	time_t nextSendTime,now;
 	int isFirstQuery = 1;
 	dataRead_t *dr;
 
-	mqttprefix = strdup(MQTT_PREFIX_DEF);
 	mqttTopic  = strdup(MQTT_DEF_TOPIC);
 
-	mClient = mqtt_pub_init (NULL, 0, (char *)MQTT_CLIENT_ID, NULL);
+	mClient = mqtt_pub_init (NULL, 0, NULL, NULL);
 
 	if (parseArgs(argc,argv) != 0) exit(1);
 
+	if (!mClient->clientId) mClient->clientId = strdup(MQTT_CLIENT_ID);
+
+	mqttReceiverClientID = (char *)malloc(strlen(mClient->clientId)+1+4);  // -SUB
+	strcpy(mqttReceiverClientID,mClient->clientId);
+	strcat(mqttReceiverClientID,"-SUB");
 
 	if (sizeof(time_t) <= 4) {
 		LOGN(0,"Warning: TimeT is less than 64 bit, this may fail after year 2038, recompile with newer kernel and glibc to avoid this");
@@ -473,13 +491,19 @@ int main(int argc, char *argv[]) {
 		if (rc != 0) LOGN(0,"mqtt_pub_connect returned %d, will retry later",rc);
 	}
 
-	rc = mqttReceiverInit (mClient->hostname, mClient->port, mqttTopic, ME "-SUB");
+	if (ghost && gtoken && gpushid) {
+		gClient = influxdb_post_init_grafana (ghost, gport, gpushid, gtoken);
+	} else
+		LOGN(0,"no grafana host,token or pushid specified, grafana sender disabled");
+
+	rc = mqttReceiverInit (mClient->hostname, mClient->port, mqttTopic, mqttReceiverClientID);
 	if (!rc) {
 		EPRINTFN("failed to init mqttReceiver for %s:%d, topic: %s",mClient->hostname,mClient->port,mqttTopic);
 		exit(1);
 	}
 
 	LOGN(0,"mainloop started (%s %s)",ME,VER);
+
 
 	// term handler for ^c and SIGTERM send by systemd
 	signal(SIGTERM, sigterm_handler);
@@ -489,7 +513,12 @@ int main(int argc, char *argv[]) {
 	signal(SIGUSR2, sigusr1_handler);
 
 	int loopCount = 0;
-	nextSendTime = time(NULL) + queryIntervalSecs;
+	now = time(NULL);
+	nextSendTime = now + queryIntervalSecs;
+	if (verbose || dryrun) {
+		LOG (0,"Influx next write time: %s",ctime(&nextSendTime));
+		LOGN(0,"                   now: %s (interval: %d)",strtok(ctime(&now),"\n"),queryIntervalSecs);
+	}
 
 	while (!terminated) {
 
@@ -499,22 +528,24 @@ int main(int argc, char *argv[]) {
 
 		if (iClient) {		// influx
 			if (time(0) >= nextSendTime) {
-				influxBufUsed = 0; influxBuf=NULL;
+				influxdb_post_freeBuffer(iClient);
 				influxTimestamp = influxdb_getTimestamp();
 				dataRead_t *dataRead = mqttDataRead;
 				while(dataRead) {
-					influxAppendData (dataRead, influxTimestamp);
+					influxAppendData (iClient, dataRead, influxTimestamp);
 					dataRead = dataRead->next;
 				}
 				if (dryrun) {
-					if (influxBuf) printf("\nDryrun: would send to influxdb:\n%s\n",influxBuf);
-					free(influxBuf); influxBuf = NULL;
+					if (iClient->influxBufLen) printf("\nDryrun: would send to influxdb:\n%s\n",iClient->influxBuf);
+					else printf("Dryrun: nothing to be send to influxdb\n");
+					influxdb_post_freeBuffer(iClient);
                     dryrun--;
                     if (!dryrun) terminated++;
 				} else {
-					if (influxBuf) {
-						rc = influxdb_post_http_line(iClient, influxBuf);
-						influxBuf=NULL;
+					//printf("Posting to influxdb, len:%ld\n",iClient->influxBufLen);
+					if (iClient->influxBufLen) {
+						rc = influxdb_post_http_line(iClient);
+						influxdb_post_freeBuffer(iClient);
 						if (rc != 0) {
 							LOGN(0,"Error: influxdb_post_http_line failed with rc %d",rc);
 						}
@@ -528,20 +559,23 @@ int main(int argc, char *argv[]) {
                 if (!dryrun) terminated++;
             }
 
-		if (mClient) {		// mqtt
-
+		int numChanged = 0;
+		if ((mClient && mqttprefix) || gClient) {		// mqtt
 			dr = mqttDataRead;
 			while(dr) {
 				if (dr->updated) {
 					//if (dryrun && !dryRunMsg) printf("Dryrun: would send to mqtt:\n");
 					dr->updated = 0;
-					mqttSendData (dr,dryrun);
+					numChanged++;
+					if (mClient && mqttprefix) mqttSendData (dr,dryrun);
 				}
 				dr = dr->next;
 			}
+			if (numChanged) GrafanaWriteData(gClient);
 		}
 
 		msleep(200);
+		if (gClient) influxdb_post_http(iClient);	// for websocket ping
 
 
 		if (isFirstQuery) isFirstQuery--;
