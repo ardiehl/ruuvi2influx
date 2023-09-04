@@ -28,7 +28,9 @@ typedef struct {
 } mqtt_pubT;
 
 
-mqtt_pubT * mqtt_pub_init (char * hostname, int port, char *  clientId, char *topicPrefix);
+mqtt_pubT * mqtt_pub_init (const char * hostname, int port, const char *  clientId, const char *topicPrefix);
+
+void mqtt_pub_yield (mqtt_pubT *m);
 
 int mqtt_pub_free(mqtt_pubT *m);
 

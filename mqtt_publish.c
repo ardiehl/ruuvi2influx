@@ -6,12 +6,22 @@
 #include <string.h>
 #include <stdarg.h>
 #include "log.h"
+#include <unistd.h>
 
 MQTTClient_connectOptions conn_optsDefault = MQTTClient_connectOptions_initializer;
 MQTTClient_createOptions createOpsDefault = MQTTClient_createOptions_initializer;
 MQTTClient_message pubmsgDefault = MQTTClient_message_initializer;
 
-mqtt_pubT * mqtt_pub_init (char * hostname, int port, char *  clientId, char *topicPrefix) {
+void mqtt_pub_yield (mqtt_pubT *m) {
+	if (m)
+		if (m->client) {
+			MQTTClient_yield();
+			return;
+		}
+	usleep(1000*100);	// same as MQTTClient_yield
+}
+
+mqtt_pubT * mqtt_pub_init (const char * hostname, int port, const char *  clientId, const char *topicPrefix) {
 	mqtt_pubT * m;
 	m = calloc(1,sizeof(mqtt_pubT));
 	if (!m) return m;
@@ -19,7 +29,7 @@ mqtt_pubT * mqtt_pub_init (char * hostname, int port, char *  clientId, char *to
 	if (hostname) m->hostname = strdup(hostname);
 	m->port = port;
 	if (m->port <= 0) m->port = 1883;
-	if (clientId) m->clientId = clientId;
+	if (clientId) m->clientId = strdup(clientId);
 	if (topicPrefix) m-> topicPrefix = strdup(topicPrefix);
 
 	m->createOpts = createOpsDefault;
@@ -80,6 +90,7 @@ int mqtt_pub_connect (mqtt_pubT *m) {
 	return 0;
 }
 
+int isDisconnected;
 
 int mqtt_pub (mqtt_pubT *m, char *topicIn, char *str, int timeoutMs, int qos, int retained) {
 	MQTTClient_message pubmsg = pubmsgDefault;
@@ -101,21 +112,22 @@ int mqtt_pub (mqtt_pubT *m, char *topicIn, char *str, int timeoutMs, int qos, in
 	pubmsg.retained = retained;
 	rc = MQTTClient_publishMessage(m->client, topic, &pubmsg, &m->last_token);
 	if (rc == MQTTCLIENT_DISCONNECTED) {		// try to reconnect
-		EPRINTFN("MQTTClient_publishMessage returned MQTTCLIENT_DISCONNECTED, trying to reconnect");
+		if (!isDisconnected) EPRINTFN("MQTTClient_publishMessage returned MQTTCLIENT_DISCONNECTED, trying to reconnect");
+		isDisconnected = 1;
 		rc = mqtt_pub_connect(m);
 		if (rc != MQTTCLIENT_SUCCESS) {
-			EPRINTF("reconnect failed, unable to publish");
 			free(topic);
 			return rc;
 		}
 		rc = MQTTClient_publishMessage(m->client, topic, &pubmsg, &m->last_token);
-		if (rc == MQTTCLIENT_SUCCESS) reconnected++;
+		if (rc == MQTTCLIENT_SUCCESS) {
+			reconnected++;
+			isDisconnected = 0;
+			LOGN(0,"reconnected to mqtt server");
+		}
 	}
 	free(topic);
-	if (rc != MQTTCLIENT_SUCCESS && rc != MQTT_RECONNECTED) {
-		EPRINTFN("mqtt_pub: rc: %d",rc);
-		return rc;
-	}
+	if (rc != MQTTCLIENT_SUCCESS && rc != MQTT_RECONNECTED) return rc;
 	if (timeoutMs) rc = MQTTClient_waitForCompletion(m->client, m->last_token, timeoutMs);
 	if (reconnected && rc == MQTTCLIENT_SUCCESS) rc = MQTT_RECONNECTED;
 	return rc;

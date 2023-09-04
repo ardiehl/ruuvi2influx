@@ -19,6 +19,7 @@
 				<Option object_output="obj/Debug/" />
 				<Option type="1" />
 				<Option compiler="gcc" />
+				<Option parameters="--dryrun" />
 				<Compiler>
 					<Add option="-g" />
 				</Compiler>
@@ -58,6 +59,7 @@
 			<Option compilerVar="CC" />
 		</Unit>
 		<Unit filename="mqtt_publish.h" />
+		<Unit filename="readme.md" />
 		<Unit filename="ruuvimqtt.cpp">
 			<Option target="&lt;{~None~}&gt;" />
 		</Unit>

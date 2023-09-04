@@ -202,7 +202,7 @@ int parseArgs (int argc, char **argv) {
 
 		AP_OPT_STRVAL_CB    (0,'a',"map"            ,NULL                  ,"id,name - map id to name, can be specified multiple times",&mapCallback)
 		AP_OPT_INTVALFO     (0,'v',"verbose"        ,&log_verbosity        ,"increase or set verbose level")
-		AP_OPT_INTVAL       (0,'P',"poll"           ,&queryIntervalSecs    ,"poll intervall in seconds")
+		AP_OPT_INTVAL       (1,'P',"poll"           ,&queryIntervalSecs    ,"poll intervall in seconds")
 		AP_OPT_INTVALF      (0,'y',"syslog"         ,&syslog               ,"log to syslog insead of stderr")
 		AP_OPT_INTVALF_CB   (0,'Y',"syslogtest"     ,NULL                  ,"send a testtext to syslog and exit",&syslogTestCallback)
 		AP_OPT_INTVALF_CB   (0,'e',"version"        ,NULL                  ,"show version and exit",&showVersionCallback)
@@ -522,8 +522,10 @@ int main(int argc, char *argv[]) {
 
 	while (!terminated) {
 
-        loopCount++;
-        //if (dryrun) printf("- %d -----------------------------------------------------------------------\n",loopCount);
+		loopCount++;
+		//if (dryrun) printf("- %d -----------------------------------------------------------------------\n",loopCount);
+		mqtt_pub_yield (mClient); 			// for mqtt ping, sleeps for 100ms if no mqqt specified
+		if (gClient) influxdb_post_http(gClient);	// for websocket ping
 
 
 		if (iClient) {		// influx
