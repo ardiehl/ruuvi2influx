@@ -34,7 +34,7 @@ and send the data to influxdb (1.x or 2.x API) and/or via mqtt
 #include "ruuvimqtt.h"
 #include "MQTTClient.h"
 
-#define VER "0.04 Armin Diehl <ad@ardiehl.de> Sep 3,2023, compiled " __DATE__ " " __TIME__
+#define VER "0.05 Armin Diehl <ad@ardiehl.de> Sep 7,2023, compiled " __DATE__ " " __TIME__
 #define ME "ruuvimqtt2influx"
 #define CONFFILE "ruuvimqtt2influx.conf"
 
@@ -57,6 +57,8 @@ extern int mqttSenderConnectionLost;
 #define INFLUX_DEFAULT_TAGNAME "Device"
 char * influxMeasurement;
 char * influxTagName;
+int iVerifyPeer = 1;
+
 int influxWriteMult;    // write to influx only on x th query (>=2)
 int mqttQOS;
 int mqttRetain;
@@ -71,7 +73,7 @@ int gport = 3000;
 char *gtoken;
 char *gpushid;
 influx_client_t *gClient;
-
+int gVerifyPeer = 1;
 
 /* msleep(): Sleep for the requested number of milliseconds. */
 int msleep(long msec)
@@ -199,6 +201,7 @@ int parseArgs (int argc, char **argv) {
 		AP_OPT_INTVAL       (1,0  ,"gport"          ,&gport                ,"grafana port")
 		AP_OPT_STRVAL       (1,0  ,"gtoken"         ,&gtoken               ,"authorisation api token for Grafana")
 		AP_OPT_STRVAL       (1,0  ,"gpushid"        ,&gpushid              ,"push id for Grafana")
+		AP_OPT_INTVAL       (1,0  ,"gsslverifypeer" ,&gVerifyPeer          ,"grafana SSL certificate verification (0=off)")
 
 		AP_OPT_STRVAL_CB    (0,'a',"map"            ,NULL                  ,"id,name - map id to name, can be specified multiple times",&mapCallback)
 		AP_OPT_INTVALFO     (0,'v',"verbose"        ,&log_verbosity        ,"increase or set verbose level")
@@ -240,7 +243,7 @@ int parseArgs (int argc, char **argv) {
 
 	if (serverName) {
 		LOG(1,"Influx init: serverName: %s, port %d, dbName: %s, userName: %s, password: %s, org: %s, bucket:%s, numQueueEntries %d\n",serverName, port, dbName, userName, password, org, bucket, numQueueEntries);
-		iClient = influxdb_post_init (serverName, port, dbName, userName, password, org, bucket, token, numQueueEntries);
+		iClient = influxdb_post_init (serverName, port, dbName, userName, password, org, bucket, token, numQueueEntries, iVerifyPeer);
 	} else {
 		free(dbName);
 		free(serverName);
@@ -492,7 +495,7 @@ int main(int argc, char *argv[]) {
 	}
 
 	if (ghost && gtoken && gpushid) {
-		gClient = influxdb_post_init_grafana (ghost, gport, gpushid, gtoken);
+		gClient = influxdb_post_init_grafana (ghost, gport, gpushid, gtoken, gVerifyPeer);
 	} else
 		LOGN(0,"no grafana host,token or pushid specified, grafana sender disabled");
 
