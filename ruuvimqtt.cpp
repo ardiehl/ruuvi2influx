@@ -7,11 +7,15 @@
 #include "cJSON.h"
 #include <ctype.h>
 #include <math.h>
+#include <time.h>
 
 nameMappings_t *nameMappings;
 dataRead_t *mqttDataRead;
 MQTTClient client;
 
+int mqttReceiver_isConnected() {
+  return MQTTClient_isConnected(client);
+}
 
 nameMappings_t * findName (const char * name) {
 	if (!nameMappings) return NULL;
@@ -325,6 +329,11 @@ void connlost(void *context, char *cause) {
 #define QOS         1
 
 int mqttReceiverInit (const char *hostname, int port, const char *topic, const char *clientID) {
+time_t t = time(NULL);
+struct tm tm = *localtime(&t);
+char newClientID[512];
+
+    sprintf(newClientID,"%s-%04d%02d%02d-%02d%02d%02d", clientID, tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday, tm.tm_hour, tm.tm_min, tm.tm_sec);
 
     MQTTClient_connectOptions opts = MQTTClient_connectOptions_initializer;
     int rc;
@@ -332,7 +341,8 @@ int mqttReceiverInit (const char *hostname, int port, const char *topic, const c
 
     address = (char *)calloc(1,strlen(hostname+20));
     sprintf(address,"%s:%d",hostname,port);
-    if ((rc = MQTTClient_create(&client, address, clientID, MQTTCLIENT_PERSISTENCE_NONE, NULL)) != MQTTCLIENT_SUCCESS) {
+    EPRINTF("Connecting to MQTT server %s with client id '%s' and topic '%s'",address,newClientID,topic);
+    if ((rc = MQTTClient_create(&client, address, newClientID, MQTTCLIENT_PERSISTENCE_NONE, NULL)) != MQTTCLIENT_SUCCESS) {
         EPRINTFN("Failed to create client for address %s, return code %d", address, rc);
         free(address);
         return 0;

@@ -34,7 +34,7 @@ and send the data to influxdb (1.x or 2.x API) and/or via mqtt
 #include "ruuvimqtt.h"
 #include "MQTTClient.h"
 
-#define VER "0.05 Armin Diehl <ad@ardiehl.de> Sep 7,2023, compiled " __DATE__ " " __TIME__
+#define VER "1.00 Armin Diehl <ad@ardiehl.de> Nov 8,2023, compiled " __DATE__ " " __TIME__
 #define ME "ruuvimqtt2influx"
 #define CONFFILE "ruuvimqtt2influx.conf"
 
@@ -586,16 +586,23 @@ int main(int argc, char *argv[]) {
 		if (isFirstQuery) isFirstQuery--;
 
 		if (mqttSenderConnectionLost) {
-			rc = mqttReceiverInit (mClient->hostname, mClient->port, mqttTopic, ME "-SUB");
-			if (rc) {
-				mqttSenderConnectionLost = 0;
-				LOGN(0,"mqtt receiver reconnected");
-			} else {
-				rc = 150;		// wait 15 seconds before the next connect attempt
-				while (rc && !terminated) {
-					rc--;
-					msleep(100);
+		    if (!mqttReceiver_isConnected()) {
+				mqttReceiverDone(mqttTopic);
+				msleep(1500);
+				rc = mqttReceiverInit (mClient->hostname, mClient->port, mqttTopic, ME "-SUB");
+				if (rc) {
+					mqttSenderConnectionLost = 0;
+					LOGN(0,"mqtt receiver reconnected");
+				} else {
+					rc = 150;		// wait 15 seconds before the next connect attempt
+					while (rc && !terminated) {
+						rc--;
+						msleep(100);
+					}
 				}
+			} else {
+			  EPRINTFN("Got disconnect callback but client is connected, will not perform reconnect");
+			  mqttSenderConnectionLost = 0;
 			}
 		}
 

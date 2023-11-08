@@ -43,5 +43,6 @@ extern dataRead_t *mqttDataRead;
 
 int mqttReceiverInit (const char *hostname, int port, const char *topic, const char *clientID);
 int mqttReceiverDone (const char *topic);
+int mqttReceiver_isConnected();
 
 #endif // RUUVIMQTT_H_INCLUDED
