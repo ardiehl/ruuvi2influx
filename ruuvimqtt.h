@@ -10,6 +10,14 @@ struct nameMappings_t {
 	nameMappings_t *next;
 };
 
+
+typedef struct unmappedDevices_t unmappedDevices_t;
+struct unmappedDevices_t {
+	int64_t mac;
+	unmappedDevices_t *next;
+};
+
+
 typedef struct sensorData_t sensorData_t;
 struct sensorData_t {
 	double temperature,humidity;

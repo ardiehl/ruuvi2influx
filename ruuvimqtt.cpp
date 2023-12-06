@@ -10,6 +10,7 @@
 #include <time.h>
 
 nameMappings_t *nameMappings;
+unmappedDevices_t *unmappedDevices;
 dataRead_t *mqttDataRead;
 MQTTClient client;
 
@@ -77,6 +78,37 @@ int addMapping (const char *tokenMac, const char *name) {
 	nm->mac = mac;
 	LOGN(1,"added mapping %012lx = \"%s\"",mac,name);
 	free(macStr);
+	return 1;
+}
+
+
+unmappedDevices_t * findUnknownMac (int64_t mac) {
+	if (!unmappedDevices) return NULL;
+	unmappedDevices_t *nm = unmappedDevices;
+	while (nm) {
+		if (nm->mac == mac) return nm;
+		nm = nm->next;
+	}
+	return NULL;
+}
+
+
+int addUnknownDevice (int64_t mac) {
+
+	unmappedDevices_t *nm = findUnknownMac (mac);
+	if (nm) return 0;
+
+	nm = unmappedDevices;
+	if (!nm) {
+		unmappedDevices = (unmappedDevices_t *)calloc(1,sizeof(unmappedDevices_t));
+		nm = unmappedDevices;
+	} else {
+		while (nm->next) nm = nm->next;
+		nm->next = (unmappedDevices_t *)calloc(1,sizeof(unmappedDevices_t));
+		nm = nm->next;
+	}
+	nm->mac = mac;
+	LOGN(1,"added unknown mapping %012lx",mac);
 	return 1;
 }
 
@@ -214,6 +246,7 @@ int processRuuviData(char * data, int rssi) {
     }
 
     nm = findMac (macAddress);
+    if (!nm) addUnknownDevice (macAddress);
     // add or update in mqttDataRead
     dr = mqttDataRead;
     if (! dr) {
