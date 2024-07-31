@@ -65,9 +65,9 @@ endif
 
 
 ifeq ($(CURLSTATIC),1)
-CURLVERSION  = 8.4.0
+CURLVERSION  = 8.9.1
 CURLSRCFILE  = curl-$(CURLVERSION).tar.xz
-CURLSRC      = https://github.com/curl/curl/releases/download/curl-8_4_0/$(CURLSRCFILE)
+CURLSRC      = https://github.com/curl/curl/releases/download/curl-8_9_1/$(CURLSRCFILE)
 CURLDIR      = curl$(ARCH)$(TGT)
 CURLTAR      = $(CURLDIR)/$(CURLSRCFILE)
 CURLMAKEDIR  = $(CURLDIR)/curl-$(CURLVERSION)
@@ -129,7 +129,7 @@ $(CURLMAKE):        $(CURLTAR)
 	@echo "unpacking $(CURLSRCFILE)"
 	@cd $(CURLDIR); $(XZUNPACK) $(CURLSRCFILE) | $(TAR) xv
 	@echo "Generating Makefile"
-	@cd $(CURLMAKEDIR); ./configure --without-psl --disable-file --disable-ldap --disable-ldaps --disable-tftp --disable-dict --without-libidn2 --with-openssl --enable-websockets  --disable-ftp --disable-rtsp --disable-telnet --disable-pop3 --disable-imap --disable-smb --disable-smtp --disable-gopher --disable-mqtt --disable-manual --disable-ntlm --disable-unix-sockets --disable-cookies --without-brotli
+	@cd $(CURLMAKEDIR); ./configure --without-psl --disable-file --disable-ldap --disable-ldaps --disable-tftp --disable-dict --without-libidn2 --with-openssl --enable-websockets  --disable-ftp --disable-rtsp --disable-telnet --disable-pop3 --disable-imap --disable-smb --disable-smtp --disable-gopher --disable-mqtt --disable-manual --disable-ntlm --disable-unix-sockets --disable-cookies --without-brotli --disable-docs
 	@echo
 
 $(CURLLIB): $(CURLMAKE)
