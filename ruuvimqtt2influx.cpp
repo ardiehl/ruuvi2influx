@@ -34,7 +34,7 @@ and send the data to influxdb (1.x or 2.x API) and/or via mqtt
 #include "ruuvimqtt.h"
 #include "MQTTClient.h"
 
-#define VER "1.03 Armin Diehl <ad@ardiehl.de> Jul 31,2024, compiled " __DATE__ " " __TIME__
+#define VER "1.04444min Diehl <ad@ardiehl.de> Jul 31,2024, compiled " __DATE__ " " __TIME__
 #define ME "ruuvimqtt2influx"
 #define CONFFILE "ruuvimqtt2influx.conf"
 
@@ -398,8 +398,8 @@ int influxAppendData (influx_client_t* c, dataRead_t * data, uint64_t timestamp)
 				INFLUX_F_FLT("Humidity",data->dataInflux.humidity,1),
 				INFLUX_TS(timestamp),
 				INFLUX_END);
-    data->dataInflux.temperature = -999;
-    data->dataInflux.humidity = -999;
+    data->dataInflux.temperature = 0;
+    data->dataInflux.humidity = 0;
 	return 0;
 }
 
