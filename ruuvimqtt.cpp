@@ -108,7 +108,7 @@ int addUnknownDevice (int64_t mac) {
 		nm = nm->next;
 	}
 	nm->mac = mac;
-	LOGN(1,"added unknown mapping %012lx",mac);
+	LOGN(0,"added unknown mapping %012lx",mac);
 	return 1;
 }
 
