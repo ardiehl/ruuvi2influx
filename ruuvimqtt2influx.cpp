@@ -34,7 +34,7 @@ and send the data to influxdb (1.x or 2.x API) and/or via mqtt
 #include "ruuvimqtt.h"
 #include "MQTTClient.h"
 
-#define VER "1.04444min Diehl <ad@ardiehl.de> Jul 31,2024, compiled " __DATE__ " " __TIME__
+#define VER "1.05 Armin Diehl <ad@ardiehl.de> Sep 29,2024, compiled " __DATE__ " " __TIME__
 #define ME "ruuvimqtt2influx"
 #define CONFFILE "ruuvimqtt2influx.conf"
 
@@ -49,7 +49,7 @@ char *formulaValMeterName;
 influx_client_t *iClient;
 
 mqtt_pubT *mClient;
-extern int mqttSenderConnectionLost;
+extern int mqttReceiverConnectionLost;
 
 
 
@@ -142,8 +142,28 @@ int showVersionCallback(argParse_handleT *a, char * arg) {
 		}
 		i++;
 	}
-	if (MQTTVersion)
-	printf("paho mqtt-c: %s\n",MQTTVersion);
+	if (MQTTVersion) {
+		printf("paho mqtt-c: %s - ",MQTTVersion);
+#ifdef PAHO_STATIC
+		printf("static\n");
+#else
+		printf("dynamic\n");
+#endif
+	}
+
+	curl_version_info_data *ver = curl_version_info(CURLVERSION_NOW);
+	printf("    libcurl: %u.%u.%u - ", (ver->version_num >> 16) & 0xff, (ver->version_num >> 8) & 0xff, ver->version_num & 0xff);
+#ifdef CURL_STATIC
+	printf("static\n");
+#else
+	printf("dynamic\n");
+#endif
+
+#ifdef __GNUC__
+	printf("        gcc: " __VERSION__ "\n");
+#endif
+
+
 	exit(2);
 }
 
@@ -208,7 +228,7 @@ int parseArgs (int argc, char **argv) {
 		AP_OPT_INTVAL       (1,'P',"poll"           ,&queryIntervalSecs    ,"poll intervall in seconds")
 		AP_OPT_INTVALF      (0,'y',"syslog"         ,&syslog               ,"log to syslog insead of stderr")
 		AP_OPT_INTVALF_CB   (0,'Y',"syslogtest"     ,NULL                  ,"send a testtext to syslog and exit",&syslogTestCallback)
-		AP_OPT_INTVALF_CB   (0,'e',"version"        ,NULL                  ,"show version and exit",&showVersionCallback)
+		AP_OPT_INTVALF_CB   (0,'V',"version"        ,NULL                  ,"show version and exit",&showVersionCallback)
 		AP_OPT_INTVALFO     (0,'U',"dryrun"         ,&dryrun               ,"Show what would be written to MQTT/Influx/Grafana")
 	AP_END;
 
@@ -503,8 +523,8 @@ int main(int argc, char *argv[]) {
 
 	rc = mqttReceiverInit (mClient->hostname, mClient->port, mqttTopic, mqttReceiverClientID);
 	if (!rc) {
-		EPRINTFN("failed to init mqttReceiver for %s:%d, topic: %s",mClient->hostname,mClient->port,mqttTopic);
-		exit(1);
+		EPRINTFN("failed to init mqttReceiver for %s:%d, topic: %s, will retry later",mClient->hostname,mClient->port,mqttTopic);
+		mqttReceiverConnectionLost++;
 	}
 
 	LOGN(0,"mainloop started (%s %s)",ME,VER);
@@ -516,6 +536,11 @@ int main(int argc, char *argv[]) {
 
 	signal(SIGUSR1, sigusr2_handler);	// used for verbose level inc/dec via kill command
 	signal(SIGUSR2, sigusr1_handler);
+
+	if (signal(SIGPIPE, SIG_IGN) == SIG_ERR) {
+		EPRINTFN("signal(SIGPIPE, SIG_IGN) failed with %s - %s",errno,strerror(errno));
+		//exit(1);
+	}
 
 	int loopCount = 0;
 	now = time(NULL);
@@ -587,13 +612,14 @@ int main(int argc, char *argv[]) {
 
 		if (isFirstQuery) isFirstQuery--;
 
-		if (mqttSenderConnectionLost) {
+		if (mqttReceiverConnectionLost) {
+			VPRINTFN(1,"MQTT connection lost, will try to reconnect");
 		    if (!mqttReceiver_isConnected()) {
 				mqttReceiverDone(mqttTopic);
 				msleep(1500);
 				rc = mqttReceiverInit (mClient->hostname, mClient->port, mqttTopic, ME "-SUB");
 				if (rc) {
-					mqttSenderConnectionLost = 0;
+					mqttReceiverConnectionLost = 0;
 					LOGN(0,"mqtt receiver reconnected");
 				} else {
 					rc = 150;		// wait 15 seconds before the next connect attempt
@@ -604,12 +630,14 @@ int main(int argc, char *argv[]) {
 				}
 			} else {
 			  EPRINTFN("Got disconnect callback but client is connected, will not perform reconnect");
-			  mqttSenderConnectionLost = 0;
+			  mqttReceiverConnectionLost = 0;
 			}
 		}
 
 
 	}
+
+	VPRINTFN(1,"end of mainloop");
 
 	mqttReceiverDone(mqttTopic);
 

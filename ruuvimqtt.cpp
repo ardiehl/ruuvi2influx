@@ -306,6 +306,7 @@ int msgarrvd(void *context, char *topicName, int topicLen, MQTTClient_message *m
 	cJSON *rssi = NULL;
 	int rssiValue = 0;
 
+	VPRINTFN(3,"S: msgarrvd, topicLen: %d",topicLen);
 	tokenID = strrchr(topicName,'/');
 	if (tokenID) {
 		tokenID++;
@@ -349,14 +350,16 @@ int msgarrvd(void *context, char *topicName, int topicLen, MQTTClient_message *m
 	}
     MQTTClient_freeMessage(&message);
     MQTTClient_free(topicName);
+    VPRINTFN(3,"E: msgarrvd");
     return 1;
 }
 
-int mqttSenderConnectionLost;
+int mqttReceiverConnectionLost;
 
 void connlost(void *context, char *cause) {
-    EPRINTFN("Connection lost (%s), will try to reconnect",cause);
-    mqttSenderConnectionLost++;
+	EPRINTFN("Connection lost, will try to reconnect");
+    //EPRINTFN("Connection lost (%s), will try to reconnect",cause);
+    mqttReceiverConnectionLost++;
 }
 
 #define QOS         1
