@@ -49,6 +49,8 @@ int addMapping (const char *tokenMac, const char *name);
 extern nameMappings_t *nameMappings;
 extern dataRead_t *mqttDataRead;
 
+void mqttDataLock();
+void mqttDataUnlock();
 int mqttReceiverInit (const char *hostname, int port, const char *topic, const char *clientID);
 int mqttReceiverDone (const char *topic);
 int mqttReceiver_isConnected();

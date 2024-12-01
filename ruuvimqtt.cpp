@@ -8,6 +8,7 @@
 #include <ctype.h>
 #include <math.h>
 #include <time.h>
+#include <pthread.h>
 
 nameMappings_t *nameMappings;
 unmappedDevices_t *unmappedDevices;
@@ -286,11 +287,14 @@ int processRuuviData(char * data, int rssi) {
         dr->updated++;
         // average temp for influx
         if (dr->dataInflux.temperature < -900) dr->dataInflux.temperature = temperature; else { dr->dataInflux.temperature += temperature; dr->dataInflux.temperature = dr->dataInflux.temperature / 2; }
+        VPRINTFN(3," temperature: %5.3f dataInflux.temperature: %5.3f",temperature,dr->dataInflux.temperature);
         // max humidity for influx
         if (humidity > dr->dataInflux.humidity) dr->dataInflux.humidity = humidity;
         dr->dataInflux.rssi = rssi;
         dr->dataInflux.batteryVoltage = batteryVoltage;
         LOGN(1,"%012lx (%s): temp: %5.2f (%7.4f), humidity: %6.3f (%8.4f), pressure: %6d (%6d), batt: %5.2fV, txPower: %ddBm, rssi: %3d (%3d) mover: %d, seq: %d",macAddress,nm!=NULL?nm->name:NULL,temperature,deltaTemperature,humidity,deltaHumidity,pressure,deltaPressure,(double)batteryVoltage / 1000,txpower, rssi, deltaRssi, movementCounter, measurementSequence);
+    } else {
+    	VPRINTFN(3," received same sequence, temperature: %5.3f dataInflux.temperature: %5.3f",temperature,dr->dataInflux.temperature);
     }
     dr->dataCurr.measurementSequence = measurementSequence;
     return true;
@@ -337,7 +341,11 @@ int msgarrvd(void *context, char *topicName, int topicLen, MQTTClient_message *m
 
                 //printf("data: \"%s\"\n",data->string);
                 if (cJSON_IsString(data) && (data->valuestring != NULL)) {
+					mqttDataLock();
                     processRuuviData(data->valuestring, rssiValue);
+					mqttDataUnlock();
+                } else {
+					EPRINTFN("Error, data is NULL or not a string, data: '%s'",data->valuestring);
                 }
 			}
 
@@ -362,6 +370,17 @@ void connlost(void *context, char *cause) {
     mqttReceiverConnectionLost++;
 }
 
+pthread_mutex_t mqttLock;
+int mqttMutexCreated;
+
+void mqttDataLock() {
+	pthread_mutex_lock(&mqttLock);
+}
+
+void mqttDataUnlock() {
+	pthread_mutex_unlock(&mqttLock);
+}
+
 #define QOS         1
 
 int mqttReceiverInit (const char *hostname, int port, const char *topic, const char *clientID) {
@@ -370,6 +389,14 @@ struct tm tm = *localtime(&t);
 char newClientID[512];
 
     sprintf(newClientID,"%s-%04d%02d%02d-%02d%02d%02d", clientID, tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday, tm.tm_hour, tm.tm_min, tm.tm_sec);
+
+    if (mqttMutexCreated == 0) {
+		if (pthread_mutex_init(&mqttLock, NULL) != 0) {
+			EPRINTFN("mqttReceiverInit: mutex init failed\n");
+			exit (1);
+		}
+		mqttMutexCreated++;
+    }
 
     MQTTClient_connectOptions opts = MQTTClient_connectOptions_initializer;
     int rc;

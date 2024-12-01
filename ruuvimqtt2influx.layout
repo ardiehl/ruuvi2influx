@@ -2,39 +2,29 @@
 <CodeBlocks_layout_file>
 	<FileVersion major="1" minor="0" />
 	<ActiveTarget name="Debug" />
-	<File name="ruuvimqtt.cpp" open="1" top="0" tabpos="1" split="0" active="1" splitpos="0" zoom_1="0" zoom_2="0">
+	<File name="readme.md" open="1" top="0" tabpos="7" split="0" active="1" splitpos="0" zoom_1="0" zoom_2="0">
 		<Cursor>
-			<Cursor1 position="0" topLine="0" />
-		</Cursor>
-	</File>
-	<File name="log.h" open="1" top="0" tabpos="3" split="0" active="1" splitpos="0" zoom_1="0" zoom_2="0">
-		<Cursor>
-			<Cursor1 position="936" topLine="14" />
-		</Cursor>
-	</File>
-	<File name="influxdb-post/influxdb-post.c" open="1" top="0" tabpos="9" split="0" active="1" splitpos="0" zoom_1="0" zoom_2="0">
-		<Cursor>
-			<Cursor1 position="17381" topLine="577" />
-		</Cursor>
-	</File>
-	<File name="influxdb-post/influxdb-post.h" open="1" top="0" tabpos="8" split="0" active="1" splitpos="0" zoom_1="0" zoom_2="0">
-		<Cursor>
-			<Cursor1 position="2945" topLine="89" />
+			<Cursor1 position="6846" topLine="148" />
 		</Cursor>
 	</File>
 	<File name="ruuvimqtt2influx.cpp" open="1" top="0" tabpos="4" split="0" active="1" splitpos="0" zoom_1="0" zoom_2="0">
 		<Cursor>
-			<Cursor1 position="854" topLine="24" />
+			<Cursor1 position="1445" topLine="38" />
 		</Cursor>
 	</File>
-	<File name="Makefile" open="1" top="0" tabpos="7" split="0" active="1" splitpos="0" zoom_1="0" zoom_2="0">
+	<File name="ruuvimqtt.h" open="1" top="0" tabpos="2" split="0" active="1" splitpos="0" zoom_1="0" zoom_2="0">
 		<Cursor>
-			<Cursor1 position="2695" topLine="80" />
+			<Cursor1 position="316" topLine="0" />
 		</Cursor>
 	</File>
-	<File name="readme.md" open="1" top="0" tabpos="10" split="0" active="1" splitpos="0" zoom_1="0" zoom_2="0">
+	<File name="Makefile" open="0" top="0" tabpos="7" split="0" active="1" splitpos="0" zoom_1="0" zoom_2="0">
 		<Cursor>
-			<Cursor1 position="6846" topLine="150" />
+			<Cursor1 position="7443" topLine="236" />
+		</Cursor>
+	</File>
+	<File name="ruuvimqtt.cpp" open="1" top="1" tabpos="1" split="0" active="1" splitpos="0" zoom_1="0" zoom_2="0">
+		<Cursor>
+			<Cursor1 position="9581" topLine="286" />
 		</Cursor>
 	</File>
 	<File name="mqtt_publish.h" open="1" top="0" tabpos="5" split="0" active="1" splitpos="0" zoom_1="0" zoom_2="0">
@@ -42,14 +32,24 @@
 			<Cursor1 position="640" topLine="9" />
 		</Cursor>
 	</File>
+	<File name="log.h" open="1" top="0" tabpos="3" split="0" active="1" splitpos="0" zoom_1="0" zoom_2="0">
+		<Cursor>
+			<Cursor1 position="936" topLine="14" />
+		</Cursor>
+	</File>
+	<File name="influxdb-post/influxdb-post.c" open="0" top="0" tabpos="9" split="0" active="1" splitpos="0" zoom_1="0" zoom_2="0">
+		<Cursor>
+			<Cursor1 position="17381" topLine="566" />
+		</Cursor>
+	</File>
+	<File name="influxdb-post/influxdb-post.h" open="1" top="0" tabpos="8" split="0" active="1" splitpos="0" zoom_1="0" zoom_2="0">
+		<Cursor>
+			<Cursor1 position="2913" topLine="83" />
+		</Cursor>
+	</File>
 	<File name="mqtt_publish.c" open="1" top="0" tabpos="6" split="0" active="1" splitpos="0" zoom_1="0" zoom_2="0">
 		<Cursor>
 			<Cursor1 position="491" topLine="3" />
-		</Cursor>
-	</File>
-	<File name="ruuvimqtt.h" open="1" top="0" tabpos="2" split="0" active="1" splitpos="0" zoom_1="0" zoom_2="0">
-		<Cursor>
-			<Cursor1 position="316" topLine="0" />
 		</Cursor>
 	</File>
 </CodeBlocks_layout_file>
