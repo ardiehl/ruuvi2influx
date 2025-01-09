@@ -286,7 +286,9 @@ int processRuuviData(char * data, int rssi) {
     if (measurementSequence != dr->dataCurr.measurementSequence) {
         dr->updated++;
         // average temp for influx
-        if (dr->dataInflux.temperature < -900) dr->dataInflux.temperature = temperature; else { dr->dataInflux.temperature += temperature; dr->dataInflux.temperature = dr->dataInflux.temperature / 2; }
+        //if (dr->dataInflux.temperature < -900) dr->dataInflux.temperature = temperature; else { dr->dataInflux.temperature += temperature; dr->dataInflux.temperature = dr->dataInflux.temperature / 2; }
+        // AD 01/2025: do not avg
+        dr->dataInflux.temperature = temperature;
         VPRINTFN(3," temperature: %5.3f dataInflux.temperature: %5.3f",temperature,dr->dataInflux.temperature);
         // max humidity for influx
         if (humidity > dr->dataInflux.humidity) dr->dataInflux.humidity = humidity;

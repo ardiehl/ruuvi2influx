@@ -33,7 +33,7 @@ and send the data to influxdb (1.x or 2.x API) and/or via mqtt
 
 #include "ruuvimqtt.h"
 #include "MQTTClient.h"
-#define VER "1.07 Armin Diehl <ad@ardiehl.de> Dec 1,2024, compiled " __DATE__ " " __TIME__
+#define VER "1.08 Armin Diehl <ad@ardiehl.de> Jan 9,2025, compiled " __DATE__ " " __TIME__
 
 #define ME "ruuvimqtt2influx"
 #define CONFFILE "ruuvimqtt2influx.conf"
